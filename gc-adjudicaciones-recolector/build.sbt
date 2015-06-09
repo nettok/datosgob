@@ -11,3 +11,5 @@ libraryDependencies += "com.typesafe.akka" % "akka-stream-experimental_2.11" % "
 libraryDependencies += "com.typesafe.akka" % "akka-http-core-experimental_2.11" % "1.0-RC3"
 
 libraryDependencies += "com.typesafe.akka" % "akka-http-experimental_2.11" % "1.0-RC3"
+
+libraryDependencies += "org.seleniumhq.selenium" % "selenium-java" % "2.46.0"
