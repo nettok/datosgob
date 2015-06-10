@@ -1,6 +1,9 @@
 // Robot: "Iñigo"
 
-import org.openqa.selenium.{WebDriver, WebElement, By}
+import java.net.URI
+
+import org.openqa.selenium.remote.{CapabilityType, DesiredCapabilities}
+import org.openqa.selenium.{Proxy, WebDriver, WebElement, By}
 import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.support.ui.{ExpectedConditions, WebDriverWait}
 
@@ -8,7 +11,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 
-case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo: WebElement) {
+case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo: WebElement, filasDatos: Seq[WebElement]) {
   val columnaFecha = filaTitulo.findElement(By.tagName("td"))
   val paginaActual = filaPagineo.findElements(By.tagName("span")).get(1)
 }
@@ -16,13 +19,16 @@ case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo
 
 object B {
   def waitForResultTable(browser: WebDriver, timeout: FiniteDuration): TablaResultado = {
-    val tablaResultado = new WebDriverWait(browser, timeout.toSeconds).until(
+    val tabla = new WebDriverWait(browser, timeout.toSeconds).until(
       ExpectedConditions.presenceOfElementLocated(By.id("MasterGC_ContentBlockHolder_dgResultado")))
 
-    val filaTitulo = tablaResultado.findElement(By.className("TablaTitulo"))
-    val filaPagineo = tablaResultado.findElement(By.className("TablaPagineo"))
+    val filaTitulo = tabla.findElement(By.className("TablaTitulo"))
+    val filaPagineo = tabla.findElement(By.className("TablaPagineo"))
 
-    TablaResultado(tablaResultado, filaTitulo, filaPagineo)
+    val filasDatos = tabla.findElements(By.tagName("tr")).asScala.filter(we =>
+      List("TablaFila1", "TablaFila2").contains(we.getAttribute("class")))
+
+    TablaResultado(tabla, filaTitulo, filaPagineo, filasDatos)
   }
 
   def waitForResultTableUpdate(browser: WebDriver, timeout: FiniteDuration, oldTablaResultado: TablaResultado): TablaResultado = {
@@ -38,7 +44,13 @@ object ConcursosAdjudicados extends App {
   val waitTimeout = 10.seconds
   val waitTimeoutSeconds = waitTimeout.toSeconds
 
-  val browser = new FirefoxDriver()
+  // Iniciar instancia del browser
+
+  val proxy = new Proxy().setSocksProxy("localhost:8888")
+  val capabilities = new DesiredCapabilities()
+  capabilities.setCapability(CapabilityType.PROXY, proxy)
+
+  val browser = new FirefoxDriver(capabilities)
 
   // Navegar a la pagina de consultas de adjudicaciones
 
@@ -73,8 +85,32 @@ object ConcursosAdjudicados extends App {
   // Obtener registros de la pagina actual
 
   // TODO
-  var fila1 = tabla.tabla.findElement(By.className("TablaFila1"))
-  println(fila1.getText)
+  for (fila <- tabla.filasDatos) {
+    // Obtener texto de las columnas
+
+    val cols = fila.findElements(By.tagName("td"))
+    val fechaAdjudicacion = cols.get(0).getText
+    val proveedor = cols.get(1).getText
+    val nitOPais = cols.get(2).getText
+    val monto = cols.get(3).getText
+    val nog = cols.get(4).getText
+
+    // Obtener identificador del proveedor
+
+    val proveedorHref = cols.get(1).findElement(By.tagName("a")).getAttribute("href")
+
+    val idProveedor: Option[String] =
+      if (proveedorHref != null) {
+        new URI(proveedorHref).getQuery.split('&').map { param =>
+          val keyValue = param.split('=')
+          (keyValue(0), keyValue(1))
+        }.toMap.get("lprv")
+      } else {
+        None
+      }
+
+    println(fechaAdjudicacion, proveedor, nitOPais, monto, nog, idProveedor)
+  }
 
   // TODO: Pasar a la siguiente pagina si existe
 
