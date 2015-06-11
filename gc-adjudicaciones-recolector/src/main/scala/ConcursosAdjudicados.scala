@@ -10,6 +10,7 @@ import org.openqa.selenium.{Proxy, WebDriver, WebElement, By}
 import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.support.ui.{ExpectedConditions, WebDriverWait}
 
+import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
@@ -17,6 +18,10 @@ import scala.concurrent.duration._
 case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo: WebElement, filasDatos: Seq[WebElement]) {
   val columnaFecha = filaTitulo.findElement(By.tagName("td"))
   val paginaActual = filaPagineo.findElements(By.tagName("span")).get(1)
+
+  val paginaSiguiente: Option[WebElement] = filaPagineo.findElements(By.xpath("./td/*")).asScala.dropWhile(we =>
+    we.getText != paginaActual.getText
+  ).slice(1, 2).headOption
 }
 
 case class Proveedor(id: Option[Long], nombre: String)
@@ -167,11 +172,21 @@ object ConcursosAdjudicados extends App {
   assert(tabla.columnaFecha.getText == "Fecha de adjudicación▲", "El resultado debe estar en orden ascendente")
 
   // Obtener registros de la pagina actual
-  for (fila <- tabla.filasDatos) {
-    println(U.readFilaDatos(fila))
+  // Cambiar a la siguiente pagina si existe y repetir
+
+  @tailrec
+  def obtenerDatos(tabla: TablaResultado): Unit = {
+    for (fila <- tabla.filasDatos) {
+      println(U.readFilaDatos(fila))
+    }
+
+    tabla.paginaSiguiente match {
+      case Some(pagSig) =>
+        pagSig.click()
+        obtenerDatos(U.waitForTablaResultadoUpdate(browser, waitTimeout, tabla))
+      case None =>
+    }
   }
 
-  // TODO: Pasar a la siguiente pagina si existe
-
-  // TODO: Ir a: Obtener registro de la pagina actual
+  obtenerDatos(tabla)
 }
