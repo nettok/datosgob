@@ -5,12 +5,10 @@ import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import org.openqa.selenium.remote.{CapabilityType, DesiredCapabilities}
-import org.openqa.selenium.{Proxy, WebDriver, WebElement, By}
-import org.openqa.selenium.firefox.FirefoxDriver
+import org.openqa.selenium._
+import org.openqa.selenium.remote.RemoteWebDriver
 import org.openqa.selenium.support.ui.{ExpectedConditions, WebDriverWait}
 
-import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
@@ -28,9 +26,74 @@ case class Proveedor(id: Option[Long], nombre: String)
 
 case class Adjudicacion(fecha: LocalDate, proveedor: Proveedor, nitOPais: Either[String, String], monto: BigDecimal, nog: Long)
 
-object U {
-  def waitForTablaResultado(browser: WebDriver, timeout: FiniteDuration): TablaResultado = {
-    val tabla = new WebDriverWait(browser, timeout.toSeconds).until(
+class ConcursosAdjudicadosCrawler private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
+
+  private val timeoutSeconds = timeout.toSeconds
+
+  private def crawl(): Iterator[Adjudicacion] = {
+    // Navegar a la pagina de consultas de adjudicaciones
+
+    browser.get("http://www.guatecompras.gt/proveedores/consultaadvprovee.aspx")
+
+    // Encontrar "Opción 1: Buscar TODAS las adjudicaciones"
+
+    val opcion1Id = "MasterGC_ContentBlockHolder_rdbOpciones_0"
+    val opcion1Input = browser.findElement(By.id(opcion1Id))
+    val opcion1Label = browser.findElement(By.cssSelector(s"""label[for="$opcion1Id"]"""))
+    assert(opcion1Label.getText == "Opción 1: Buscar TODAS las adjudicaciones", "Esta debe ser la opcion 1")
+
+    // Realizar consulta haciendo clic en esta opcion
+    // y esperar a que se actualice la pagina con el resultado (ajax)
+
+    opcion1Input.click()
+
+    var tabla = waitForTablaResultado
+    assert(tabla.paginaActual.getText == "1", "Tenemos que estar en la primera pagina")
+    assert(tabla.columnaFecha.getText == "Fecha de adjudicación▼",
+      """El resultado debe estar ordenado por "Fecha de adjudicación" en orden descendente""")
+
+    // Ordenar el resultado en orden ascendente
+    // y esperar a que se actualice el resultado (ajax)
+
+    var cambiarOrden = tabla.columnaFecha.findElement(By.tagName("a"))
+    cambiarOrden.click()
+
+    tabla = waitForTablaResultadoUpdate(tabla)
+    assert(tabla.columnaFecha.getText == "Fecha de adjudicación▲", "El resultado debe estar en orden ascendente")
+
+    // Obtener registros de la pagina actual
+    // Cambiar a la siguiente pagina si existe y repetir
+
+    val paginas = new Iterator[TablaResultado] {
+      var primeraVez = true
+      var tablaActual: Option[TablaResultado] = Some(tabla)
+      def hasNext = primeraVez || tablaActual.get.paginaSiguiente.isDefined
+      def next(): TablaResultado = {
+        if (!primeraVez) {
+          tablaActual  =
+            tablaActual.get.paginaSiguiente match {
+              case Some(pagSig) =>
+                pagSig.click()
+                Some(waitForTablaResultadoUpdate(tablaActual.get))
+              case None => None
+            }
+        } else primeraVez = false
+
+        tablaActual.get
+      }
+    }
+
+    val adjudicaciones =
+      for {
+        pagina <- paginas
+        fila <- pagina.filasDatos
+      } yield readFilaDatos(fila)
+
+    adjudicaciones
+  }
+
+  private def waitForTablaResultado: TablaResultado = {
+    val tabla = new WebDriverWait(browser, timeoutSeconds).until(
       ExpectedConditions.presenceOfElementLocated(By.id("MasterGC_ContentBlockHolder_dgResultado")))
 
     val filaTitulo = tabla.findElement(By.className("TablaTitulo"))
@@ -42,14 +105,14 @@ object U {
     TablaResultado(tabla, filaTitulo, filaPagineo, filasDatos)
   }
 
-  def waitForTablaResultadoUpdate(browser: WebDriver, timeout: FiniteDuration, oldTablaResultado: TablaResultado): TablaResultado = {
-    new WebDriverWait(browser, timeout.toSeconds).until(
+  private def waitForTablaResultadoUpdate(oldTablaResultado: TablaResultado): TablaResultado = {
+    new WebDriverWait(browser, timeoutSeconds).until(
       ExpectedConditions.stalenessOf(oldTablaResultado.tabla))
 
-    waitForTablaResultado(browser, 1.second)
+    waitForTablaResultado
   }
 
-  def readFilaDatos(filaDatos: WebElement): Adjudicacion = {
+  private def readFilaDatos(filaDatos: WebElement): Adjudicacion = {
     // Obtener texto de las columnas
 
     val cols = filaDatos.findElements(By.tagName("td"))
@@ -84,7 +147,7 @@ object U {
     Adjudicacion(fecha, proveedor, nitOPais, monto, nog)
   }
 
-  def readFecha(fechaTexto: String): LocalDate = {
+  private def readFecha(fechaTexto: String): LocalDate = {
     val splitted = fechaTexto.split('.')
 
     splitted(1) =
@@ -123,70 +186,13 @@ object U {
     decimalFormat
   }
 
-  def readMonto(montoTexto: String): BigDecimal = {
+  private def readMonto(montoTexto: String): BigDecimal = {
     BigDecimal(decimalFormat.parse(montoTexto).asInstanceOf[java.math.BigDecimal])
   }
 }
 
-
-object ConcursosAdjudicados extends App {
-  val waitTimeout = 10.seconds
-  val waitTimeoutSeconds = waitTimeout.toSeconds
-
-  // Iniciar instancia del browser
-
-  val proxy = new Proxy().setSocksProxy("localhost:8888")
-  val capabilities = new DesiredCapabilities()
-  capabilities.setCapability(CapabilityType.PROXY, proxy)
-
-  val browser = new FirefoxDriver(capabilities)
-
-  // Navegar a la pagina de consultas de adjudicaciones
-
-  browser.get("http://www.guatecompras.gt/proveedores/consultaadvprovee.aspx")
-
-  // Encontrar "Opción 1: Buscar TODAS las adjudicaciones"
-
-  val opcion1Id = "MasterGC_ContentBlockHolder_rdbOpciones_0"
-  val opcion1Input = browser.findElement(By.id(opcion1Id))
-  val opcion1Label = browser.findElement(By.cssSelector(s"""label[for="$opcion1Id"]"""))
-  assert(opcion1Label.getText == "Opción 1: Buscar TODAS las adjudicaciones", "Esta debe ser la opcion 1")
-
-  // Realizar consulta haciendo clic en esta opcion
-  // y esperar a que se actualice la pagina con el resultado (ajax)
-
-  opcion1Input.click()
-
-  var tabla = U.waitForTablaResultado(browser, waitTimeout)
-  assert(tabla.paginaActual.getText == "1", "Tenemos que estar en la primera pagina")
-  assert(tabla.columnaFecha.getText == "Fecha de adjudicación▼",
-    """El resultado debe estar ordenado por "Fecha de adjudicación" en orden descendente""")
-
-  // Ordenar el resultado en orden ascendente
-  // y esperar a que se actualice el resultado (ajax)
-
-  var cambiarOrden = tabla.columnaFecha.findElement(By.tagName("a"))
-  cambiarOrden.click()
-
-  tabla = U.waitForTablaResultadoUpdate(browser, waitTimeout, tabla)
-  assert(tabla.columnaFecha.getText == "Fecha de adjudicación▲", "El resultado debe estar en orden ascendente")
-
-  // Obtener registros de la pagina actual
-  // Cambiar a la siguiente pagina si existe y repetir
-
-  @tailrec
-  def obtenerDatos(tabla: TablaResultado): Unit = {
-    for (fila <- tabla.filasDatos) {
-      println(U.readFilaDatos(fila))
-    }
-
-    tabla.paginaSiguiente match {
-      case Some(pagSig) =>
-        pagSig.click()
-        obtenerDatos(U.waitForTablaResultadoUpdate(browser, waitTimeout, tabla))
-      case None =>
-    }
+object ConcursosAdjudicadosCrawler {
+  def asIterator(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
+    new ConcursosAdjudicadosCrawler(browser, timeout).crawl()
   }
-
-  obtenerDatos(tabla)
 }
