@@ -24,7 +24,8 @@ case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo
 
 case class Proveedor(id: Option[Long], nombre: String)
 
-case class Adjudicacion(fecha: LocalDate, proveedor: Proveedor, nitOPais: Either[String, String], monto: BigDecimal, nog: Long)
+case class Adjudicacion(nog: Long, fecha: LocalDate, proveedor: Proveedor,
+                        nit: Option[String], pais: Option[String], monto: BigDecimal)
 
 class ConcursosAdjudicadosCrawler private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
 
@@ -140,11 +141,11 @@ class ConcursosAdjudicadosCrawler private (val browser: RemoteWebDriver, val tim
 
     val fecha = readFecha(fechaTexto)
     val proveedor = Proveedor(idProveedor, nombreProveedor)
-    val nitOPais = if (idProveedor.isDefined) Left(nitOPaisTexto) else Right(nitOPaisTexto)
+    val (nit, pais) = if (idProveedor.isDefined) (Some(nitOPaisTexto), None) else (None, Some(nitOPaisTexto))
     val monto = readMonto(montoTexto)
     val nog = nogTexto.toLong
 
-    Adjudicacion(fecha, proveedor, nitOPais, monto, nog)
+    Adjudicacion(nog, fecha, proveedor, nit, pais, monto)
   }
 
   private def readFecha(fechaTexto: String): LocalDate = {

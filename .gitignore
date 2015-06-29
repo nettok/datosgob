@@ -1,3 +1,5 @@
+*.db
+
 ### Scala ###
 *.class
 *.log
