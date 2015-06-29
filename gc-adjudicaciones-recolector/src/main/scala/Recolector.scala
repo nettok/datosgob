@@ -7,9 +7,9 @@ object Recolector extends App {
   val logger = LoggerFactory.getLogger(Recolector.getClass)
 
   ConcursosAdjudicadosCrawler.asIterator(new FirefoxDriver()).duplicate match {
-    case (it1, it2) => DB.insert(it1).zip(it2) foreach { case (recordsUpdatedF, adjudicacion) =>
+    case (it1, it2) => DB.insertOrUpdate(it1).zip(it2) foreach { case (recordsUpdatedF, adjudicacion) =>
       recordsUpdatedF foreach { recordsUpdated =>
-        logger.info(s"Inserted [$recordsUpdated] $adjudicacion")
+        logger.info(s"Upserted [$recordsUpdated] $adjudicacion")
       }
     }
   }

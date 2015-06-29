@@ -13,10 +13,10 @@ object DB {
   val db = Database.forURL("jdbc:sqlite:adjudicaciones.db", driver="org.sqlite.JDBC")
 
   db.run(adjudicaciones.schema.create) andThen {
-    case result => logger.debug(result.toString)
+    case result => logger.info(result.toString)
   }
 
-  def insert(records: Iterator[Adjudicacion]): Iterator[Future[Int]] = {
+  def insertOrUpdate(records: Iterator[Adjudicacion]): Iterator[Future[Int]] = {
     for (record <- records) yield db.run(adjudicaciones.insertOrUpdate(record))
   }
 }
