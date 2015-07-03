@@ -3,17 +3,28 @@ import akka.stream.ActorMaterializer
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 
+import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
+import play.api.libs.json.Json
+
 import scala.io.StdIn
+
+case class Saludo(saludo: String)
+
+object Saludo {
+  implicit val fmt = Json.format[Saludo]
+}
 
 object Server extends App {
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
 
+  import PlayJsonSupport._
+
   val route =
     pathEndOrSingleSlash {
       get {
         complete {
-          "Hola mundo!"
+          Saludo("Hola mundo!")
         }
       }
     }
