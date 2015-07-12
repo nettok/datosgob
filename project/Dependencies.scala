@@ -21,5 +21,5 @@ object Dependencies {
     Seq(akkaActor, akkaHttp, akkaHttpJson)
 
   val recolectorDeps =
-    Seq(selenium, slick, sqlite, logback)
+    Seq(selenium, logback)
 }
