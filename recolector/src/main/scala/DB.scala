@@ -10,7 +10,7 @@ object DB {
   val logger = LoggerFactory.getLogger(DB.getClass)
 
   val adjudicaciones = TableQuery[Adjudicaciones]
-  val db = Database.forURL("jdbc:sqlite:../data/adjudicaciones.sqlite", driver="org.sqlite.JDBC")
+  val db = Database.forURL("jdbc:sqlite:datafiles/adjudicaciones.sqlite", driver="org.sqlite.JDBC")
 
   db.run(adjudicaciones.schema.create) andThen {
     case result => logger.info(result.toString)

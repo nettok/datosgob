@@ -22,11 +22,6 @@ case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo
   ).slice(1, 2).headOption
 }
 
-case class Proveedor(id: Option[Long], nombre: String)
-
-case class Adjudicacion(nog: Long, fecha: LocalDate, proveedor: Proveedor,
-                        nit: Option[String], pais: Option[String], monto: BigDecimal)
-
 class ConcursosAdjudicadosCrawler private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
 
   private val timeoutSeconds = timeout.toSeconds
