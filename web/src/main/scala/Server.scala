@@ -5,7 +5,14 @@ import akka.http.scaladsl.server.Directives._
 
 import scala.io.StdIn
 
-object Server extends App {
+import db.DbConfig
+
+object Server extends App with DbConfig {
+  import slick.driver.SQLiteDriver
+  val driver = SQLiteDriver
+
+  setupDb
+
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
 

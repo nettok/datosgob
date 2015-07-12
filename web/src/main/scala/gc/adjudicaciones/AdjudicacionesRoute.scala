@@ -2,6 +2,7 @@ package gc.adjudicaciones
 
 import java.time.{Year, YearMonth, LocalDate}
 import akka.http.scaladsl.server.Directives._
+import db.DbConfig
 
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport._
 import play.api.libs.json.Json

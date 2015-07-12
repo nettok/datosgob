@@ -1,12 +1,7 @@
 package gc.adjudicaciones
 
 import java.time.LocalDate
-
-import org.slf4j.LoggerFactory
 import slick.driver.JdbcProfile
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 trait AdjudicacionTable {
   protected val driver: JdbcProfile
@@ -33,23 +28,4 @@ trait AdjudicacionTable {
     date => date.toString,
     str => LocalDate.parse(str)
   )
-}
-
-trait DbConfig extends AdjudicacionTable {
-  val logger = LoggerFactory.getLogger(this.getClass)
-
-  protected val driver: JdbcProfile
-  import driver.api._
-
-  lazy val db = Database.forURL("jdbc:sqlite:datafiles/adjudicaciones.sqlite", driver="org.sqlite.JDBC")
-
-  def setup = {
-    db.run(adjudicaciones.schema.create) andThen {
-      case result => logger.info(result.toString)
-    }
-  }
-
-  def insertOrUpdate(records: Iterator[Adjudicacion]): Iterator[Future[Int]] = {
-    for (record <- records) yield db.run(adjudicaciones.insertOrUpdate(record))
-  }
 }
