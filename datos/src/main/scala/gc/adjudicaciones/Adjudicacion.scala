@@ -1,3 +1,5 @@
+package gc.adjudicaciones
+
 import java.time.LocalDate
 
 case class Proveedor(id: Option[Long], nombre: String)

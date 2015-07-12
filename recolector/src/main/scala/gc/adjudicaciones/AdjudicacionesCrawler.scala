@@ -1,3 +1,5 @@
+package gc.adjudicaciones
+
 // Robot: "Iñigo"
 
 import java.net.URI
@@ -22,7 +24,7 @@ case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo
   ).slice(1, 2).headOption
 }
 
-class ConcursosAdjudicadosCrawler private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
+class AdjudicacionesCrawler private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
 
   private val timeoutSeconds = timeout.toSeconds
 
@@ -187,8 +189,8 @@ class ConcursosAdjudicadosCrawler private (val browser: RemoteWebDriver, val tim
   }
 }
 
-object ConcursosAdjudicadosCrawler {
+object AdjudicacionesCrawler {
   def asIterator(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
-    new ConcursosAdjudicadosCrawler(browser, timeout).crawl()
+    new AdjudicacionesCrawler(browser, timeout).crawl()
   }
 }
