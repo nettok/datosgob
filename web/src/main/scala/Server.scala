@@ -8,8 +8,8 @@ import scala.io.StdIn
 import db.DbConfig
 
 object Server extends App with DbConfig {
-  import slick.driver.SQLiteDriver
-  val driver = SQLiteDriver
+  import slick.driver.PostgresDriver
+  val driver = PostgresDriver
 
   setupDb
 

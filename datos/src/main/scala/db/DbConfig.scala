@@ -12,7 +12,7 @@ trait DbConfig extends AdjudicacionTable {
   protected val driver: JdbcProfile
   import driver.api._
 
-  lazy val db = Database.forURL("jdbc:sqlite:datafiles/adjudicaciones.sqlite", driver="org.sqlite.JDBC")
+  lazy val db = Database.forConfig("postgres")
 
   def setupDb = {
     db.run(adjudicaciones.schema.create) andThen {

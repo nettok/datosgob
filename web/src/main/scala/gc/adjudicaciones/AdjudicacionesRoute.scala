@@ -8,8 +8,8 @@ import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport._
 import play.api.libs.json.Json
 
 object AdjudicacionesRoute extends DbConfig {
-  import slick.driver.SQLiteDriver
-  val driver = SQLiteDriver
+  import slick.driver.PostgresDriver
+  val driver = PostgresDriver
   import driver.api._
 
   implicit val proveedorFmt = Json.format[Proveedor]

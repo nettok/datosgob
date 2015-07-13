@@ -8,8 +8,8 @@ import scala.concurrent.Future
 import db.DbConfig
 
 object AdjudicacionesRecolector extends App with DbConfig {
-  import slick.driver.SQLiteDriver
-  val driver = SQLiteDriver
+  import slick.driver.PostgresDriver
+  val driver = PostgresDriver
   import driver.api._
 
   setupDb
