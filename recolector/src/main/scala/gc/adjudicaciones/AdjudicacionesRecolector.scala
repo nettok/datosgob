@@ -1,6 +1,6 @@
 package gc.adjudicaciones
 
-import org.openqa.selenium.firefox.FirefoxDriver
+import org.openqa.selenium.phantomjs.PhantomJSDriver
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -14,7 +14,7 @@ object AdjudicacionesRecolector extends App with DbConfig {
 
   setupDb
 
-  AdjudicacionesCrawler.asIterator(new FirefoxDriver()).duplicate match {
+  AdjudicacionesCrawler.asIterator(new PhantomJSDriver()).duplicate match {
     case (it1, it2) => insertOrUpdate(it1).zip(it2) foreach { case (recordsUpdatedF, adjudicacion) =>
       recordsUpdatedF foreach { recordsUpdated =>
         logger.info(s"Upserted [$recordsUpdated] $adjudicacion")

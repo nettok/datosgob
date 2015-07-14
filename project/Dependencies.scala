@@ -13,6 +13,7 @@ object Dependencies {
   val hikaricp = "com.zaxxer" % "HikariCP" % "2.3.9"
   val postgres = "org.postgresql" % "postgresql" % "9.4-1201-jdbc41"
   val selenium = "org.seleniumhq.selenium" % "selenium-java" % "2.46.0"
+  val phantomjsdriver = "com.codeborne" % "phantomjsdriver" % "1.2.1"
   val logback = "ch.qos.logback" % "logback-classic" % "1.1.3"
 
   // Projects
@@ -23,5 +24,5 @@ object Dependencies {
     Seq(akkaActor, akkaHttp, akkaHttpJson)
 
   val recolectorDeps =
-    Seq(selenium, logback)
+    Seq(selenium, phantomjsdriver, logback)
 }
