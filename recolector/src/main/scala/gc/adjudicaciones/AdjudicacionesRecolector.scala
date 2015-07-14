@@ -3,7 +3,6 @@ package gc.adjudicaciones
 import org.openqa.selenium.phantomjs.PhantomJSDriver
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 import db.DbConfig
 
@@ -14,15 +13,21 @@ object AdjudicacionesRecolector extends App with DbConfig {
 
   setupDb
 
-  AdjudicacionesCrawler.asIterator(new PhantomJSDriver()).duplicate match {
-    case (it1, it2) => insertOrUpdate(it1).zip(it2) foreach { case (recordsUpdatedF, adjudicacion) =>
-      recordsUpdatedF foreach { recordsUpdated =>
-        logger.info(s"Upserted [$recordsUpdated] $adjudicacion")
-      }
-    }
-  }
+  AdjudicacionesCrawler.asIterator(new PhantomJSDriver()).grouped(50).foreach { batch =>
+    val insertBatch = db.run(adjudicaciones ++= batch)
 
-  def insertOrUpdate(records: Iterator[Adjudicacion]): Iterator[Future[Int]] = {
-    for (record <- records) yield db.run(adjudicaciones.insertOrUpdate(record))
+    val first = batch.head
+    val last = batch.last
+    val from = (first.fecha, first.nog, first.proveedor.nombre)
+    val to = (last.fecha, last.nog, last.proveedor.nombre)
+    logger.info(s"Inserting batch from $from to $to")
+
+    insertBatch.onSuccess {
+      case Some(recordsInserted) => logger.info(s"Inserted $recordsInserted of ${batch.length}")
+    }
+
+    insertBatch.onFailure {
+      case e: java.sql.BatchUpdateException => logger.error(s"$e\n-- ${e.getNextException}")
+    }
   }
 }

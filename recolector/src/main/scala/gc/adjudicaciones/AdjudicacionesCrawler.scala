@@ -137,12 +137,12 @@ class AdjudicacionesCrawler private (val browser: RemoteWebDriver, val timeout: 
     // Ensamblar resultado
 
     val fecha = readFecha(fechaTexto)
-    val proveedor = Proveedor(idProveedor, nombreProveedor)
     val (nit, pais) = if (idProveedor.isDefined) (Some(nitOPaisTexto), None) else (None, Some(nitOPaisTexto))
+    val proveedor = Proveedor(nombreProveedor, idProveedor, nit, pais)
     val monto = readMonto(montoTexto)
     val nog = nogTexto.toLong
 
-    Adjudicacion(nog, fecha, proveedor, nit, pais, monto)
+    Adjudicacion(fecha, nog, proveedor, monto)
   }
 
   private def readFecha(fechaTexto: String): LocalDate = {

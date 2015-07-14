@@ -8,17 +8,18 @@ trait AdjudicacionTable {
   import driver.api._
 
   class Adjudicaciones(tag: Tag) extends Table[Adjudicacion](tag, "ADJUDICACIONES") {
-    def nog = column[Long]("NOG", O.PrimaryKey)
     def fecha = column[LocalDate]("FECHA")
-    def idProveedor = column[Option[Long]]("ID_PROVEEDOR")
+    def nog = column[Long]("NOG")
     def nombreProveedor = column[String]("NOMBRE_PROVEEDOR")
+    def idProveedor = column[Option[Long]]("ID_PROVEEDOR")
     def nit = column[Option[String]]("NIT")
     def pais = column[Option[String]]("PAIS")
     def monto = column[BigDecimal]("MONTO")
 
-    def proveedor = (idProveedor, nombreProveedor) <> (Proveedor.tupled, Proveedor.unapply)
-    def * = (nog, fecha, proveedor, nit, pais, monto) <> (Adjudicacion.tupled, Adjudicacion.unapply)
+    def proveedor = (nombreProveedor, idProveedor, nit, pais) <> (Proveedor.tupled, Proveedor.unapply)
+    def * = (fecha, nog, proveedor, monto) <> (Adjudicacion.tupled, Adjudicacion.unapply)
 
+    def pk = primaryKey("PK_ADJUDICACIONES", (nog, nombreProveedor))
     def idx_fecha = index("IDX_ADJUDICACIONES_FECHA", fecha)
   }
 
