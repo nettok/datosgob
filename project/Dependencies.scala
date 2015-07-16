@@ -6,8 +6,8 @@ object Dependencies {
 
   // Libraries
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
-  val akkaHttp = "com.typesafe.akka" %% "akka-http-experimental" % "1.0-RC4"
-  val akkaHttpJson = "de.heikoseeberger" %% "akka-http-play-json" % "0.9.1"
+  val akkaHttp = "com.typesafe.akka" %% "akka-http-experimental" % "1.0"
+  val akkaHttpJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.0.0"
   val slick = "com.typesafe.slick" %% "slick" % "3.0.0"
   val sqlite = "org.xerial" % "sqlite-jdbc" % "3.8.10.1"
   val hikaricp = "com.zaxxer" % "HikariCP" % "2.3.9"
