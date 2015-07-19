@@ -17,7 +17,7 @@ object AdjudicacionesRecolector extends App with DbConfig {
   AdjudicacionesCrawler.asIterator(new PhantomJSDriver()).grouped(50).foreach { batch =>
     val (from, to) = batchFromTo(batch)
 
-    val insertBatch = db.run(adjudicaciones ++= batch)
+    val insertBatch = db.run(adjudicaciones ++= batch.distinct)
 
     insertBatch onSuccess {
       case Some(recordsInserted) =>
