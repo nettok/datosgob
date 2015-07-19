@@ -94,11 +94,11 @@ class AdjudicacionesCrawler private (val browser: RemoteWebDriver, val timeout: 
     val tabla = new WebDriverWait(browser, timeoutSeconds).until(
       ExpectedConditions.presenceOfElementLocated(By.id("MasterGC_ContentBlockHolder_dgResultado")))
 
-    val filaTitulo = tabla.findElement(By.className("TablaTitulo"))
+    val filaTitulo = tabla.findElement(By.className("encabezado1"))
     val filaPagineo = tabla.findElement(By.className("TablaPagineo"))
 
     val filasDatos = tabla.findElements(By.tagName("tr")).asScala.filter(we =>
-      List("TablaFila1", "TablaFila2").contains(we.getAttribute("class")))
+      List("TablaFilaMix1", "TablaFilaMix2").contains(we.getAttribute("class")))
 
     TablaResultado(tabla, filaTitulo, filaPagineo, filasDatos)
   }
