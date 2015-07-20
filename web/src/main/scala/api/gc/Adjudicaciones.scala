@@ -1,13 +1,14 @@
-package gc.adjudicaciones
+package api.gc
 
-import java.time.{Year, YearMonth, LocalDate}
+import java.time.{LocalDate, Year, YearMonth}
+
 import akka.http.scaladsl.server.Directives._
 import db.DbConfig
-
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport._
+import gc.adjudicaciones.{Adjudicacion, Proveedor}
 import play.api.libs.json.Json
 
-object AdjudicacionesRoute extends DbConfig {
+object Adjudicaciones extends DbConfig {
   import slick.driver.PostgresDriver
   val driver = PostgresDriver
   import driver.api._

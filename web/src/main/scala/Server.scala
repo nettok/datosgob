@@ -16,7 +16,10 @@ object Server extends App with DbConfig {
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
 
-  val route = encodeResponse(gc.GcRoute.route)
+  val route = encodeResponse {
+    ui.StaticContent.route ~
+    api.Api.route
+  }
 
   val bindingFuture = Http().bindAndHandle(route, "0.0.0.0", 8080)
 
