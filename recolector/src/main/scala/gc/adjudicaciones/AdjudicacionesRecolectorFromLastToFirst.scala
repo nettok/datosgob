@@ -7,14 +7,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import db.DbConfig
 
-object AdjudicacionesRecolector extends App with DbConfig {
+object AdjudicacionesRecolectorFromLastToFirst extends App with DbConfig {
   import slick.driver.PostgresDriver
   val driver = PostgresDriver
   import driver.api._
 
   setupDb
 
-  AdjudicacionesCrawler.asIterator(new PhantomJSDriver()).grouped(50).foreach { batch =>
+  AdjudicacionesCrawler.asIteratorFromLastToFirst(new PhantomJSDriver()).grouped(50).foreach { batch =>
     val (from, to) = batchFromTo(batch)
 
     val insertBatch = db.run(adjudicaciones ++= batch.distinct)
@@ -55,12 +55,12 @@ object AdjudicacionesRecolector extends App with DbConfig {
   def retryBatchInsertFailure(batch: Seq[Adjudicacion]) = {
     val (from, to) = batchFromTo(batch)
     val (fromDate, toDate) = (from._1, to._1)
-    require(fromDate.compareTo(toDate) <= 0, "fecha ascendente")
+    require(fromDate.compareTo(toDate) >= 0, "fecha descendente")
 
     val batchSet = ListSet(batch: _*)
 
     val excludeQuery = adjudicaciones
-      .filter(adj => adj.fecha >= fromDate && adj.fecha <= toDate && adj.nog.inSet(batch.map(_.nog)))
+      .filter(adj => adj.fecha <= fromDate && adj.fecha >= toDate && adj.nog.inSet(batch.map(_.nog)))
 
     db.run(excludeQuery.result) map { exclude =>
       batchSet.diff(ListSet(exclude: _*))
