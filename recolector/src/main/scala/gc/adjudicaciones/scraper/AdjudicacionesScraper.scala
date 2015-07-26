@@ -18,20 +18,21 @@ case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo
   val columnaFecha = filaTitulo.findElement(By.tagName("td"))
   val paginaActual = filaPagineo.findElements(By.tagName("span")).get(1)
 
-  val paginaSiguiente: Option[WebElement] = filaPagineo.findElements(By.xpath("./td/*")).asScala.dropWhile(we =>
-    we.getText != paginaActual.getText
-  ).slice(1, 2).headOption
+  val enlacesPaginas = filaPagineo.findElements(By.xpath("./td/*")).asScala.dropWhile(_.getText != paginaActual.getText)
+  val paginaSiguiente: Option[WebElement] = enlacesPaginas.slice(1, 2).headOption
 }
 
 class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
 
   private val timeoutSeconds = timeout.toSeconds
 
-  private def start(): TablaResultado = {
+  private def start() = {
     // Navegar a la pagina de consultas de adjudicaciones
 
     browser.get("http://www.guatecompras.gt/proveedores/consultaadvprovee.aspx")
+  }
 
+  private def opcion1(): TablaResultado = {
     // Encontrar "Opción 1: Buscar TODAS las adjudicaciones"
 
     val opcion1Id = "MasterGC_ContentBlockHolder_rdbOpciones_0"
@@ -65,6 +66,15 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
     newTabla
   }
 
+  private def irAPagina(tablaActual: TablaResultado, enlacePagina: WebElement): TablaResultado = {
+    enlacePagina.click()
+    waitForTablaResultadoUpdate(tablaActual)
+  }
+
+  private def irAPaginaSiguiente(tablaActual: TablaResultado): Option[TablaResultado] = {
+    tablaActual.paginaSiguiente.map(p => irAPagina(tablaActual, p))
+  }
+
   private def iterator(tabla: TablaResultado): Iterator[Adjudicacion] = {
     // Obtener registros de la pagina actual
     // Cambiar a la siguiente pagina si existe y repetir
@@ -75,14 +85,10 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
       def hasNext = primeraVez || tablaActual.get.paginaSiguiente.isDefined
       def next(): TablaResultado = {
         if (!primeraVez) {
-          tablaActual  =
-            tablaActual.get.paginaSiguiente match {
-              case Some(pagSig) =>
-                pagSig.click()
-                Some(waitForTablaResultadoUpdate(tablaActual.get))
-              case None => None
-            }
-        } else primeraVez = false
+          tablaActual  = irAPaginaSiguiente(tablaActual.get)
+        } else {
+          primeraVez = false
+        }
 
         tablaActual.get
       }
@@ -198,12 +204,16 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
 
 object AdjudicacionesScraper {
   def asIteratorFromFirstToLast(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
-    val crawler = new AdjudicacionesScraper(browser, timeout)
-    crawler.iterator(crawler.orderByFechaAsc(crawler.start()))
+    val scraper = new AdjudicacionesScraper(browser, timeout)
+
+    scraper.start()
+    scraper.iterator(scraper.orderByFechaAsc(scraper.opcion1()))
   }
 
   def asIteratorFromLastToFirst(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
-    val crawler = new AdjudicacionesScraper(browser, timeout)
-    crawler.iterator(crawler.start())
+    val scraper = new AdjudicacionesScraper(browser, timeout)
+
+    scraper.start()
+    scraper.iterator(scraper.opcion1())
   }
 }
