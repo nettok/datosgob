@@ -53,6 +53,43 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
     tabla
   }
 
+  private def opcion5(from: LocalDate, to: LocalDate): TablaResultado = {
+    // Encontrar "Opción 5: Buscar por fecha de adjudicación, monto adjudicado o tipo de proveedor"
+
+    val opcion5Id = "MasterGC_ContentBlockHolder_rdbOpciones_4"
+    val opcion5Input = browser.findElement(By.id(opcion5Id))
+    val opcion5Label = browser.findElement(By.cssSelector(s"""label[for="$opcion5Id"]"""))
+    assert(opcion5Label.getText == "Opción 5: Buscar por fecha de adjudicación, monto adjudicado o tipo de proveedor",
+      "Esta debe ser la opcion 5")
+
+    // Seleccionar esta opcion
+    // y esperar el formulario de parametros de busqueda y establecer el rango de tiempo (ajax)
+
+    opcion5Input.click()
+
+    val form = new WebDriverWait(browser, timeoutSeconds).until(
+      ExpectedConditions.presenceOfElementLocated(By.id("MasterGC_ContentBlockHolder_Table2")))
+
+    val jsExec = browser.asInstanceOf[JavascriptExecutor]
+
+    // TODO: no usar fechas quemadas
+    jsExec.executeScript("$('#MasterGC_ContentBlockHolder_txtFechaIni').val('01.enero.2014')")
+    jsExec.executeScript("$('#MasterGC_ContentBlockHolder_txtFechaFin').val('05.enero.2014')")
+
+    val consultarButton = form.findElement(By.id("MasterGC_ContentBlockHolder_Button1"))
+
+    // Hacer la consulta
+
+    consultarButton.click()
+
+    val tabla = waitForTablaResultado
+    assert(tabla.paginaActual.getText == "1", "Tenemos que estar en la primera pagina")
+    assert(tabla.columnaFecha.getText == "Fecha de adjudicación▼",
+      """El resultado debe estar ordenado por "Fecha de adjudicación" en orden descendente""")
+
+    tabla
+  }
+
   private def orderByFechaAsc(tabla: TablaResultado): TablaResultado = {
     // Ordenar el resultado en orden ascendente
     // y esperar a que se actualice el resultado (ajax)
@@ -215,5 +252,12 @@ object AdjudicacionesScraper {
 
     scraper.start()
     scraper.iterator(scraper.opcion1())
+  }
+
+  def asIteratorOfDateRange(browser: RemoteWebDriver, from: LocalDate, to: LocalDate, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
+    val scraper = new AdjudicacionesScraper(browser, timeout)
+
+    scraper.start()
+    scraper.iterator(scraper.opcion5(from, to))
   }
 }
