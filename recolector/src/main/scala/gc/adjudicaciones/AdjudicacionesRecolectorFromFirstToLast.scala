@@ -7,6 +7,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import db.DbConfig
 
+import gc.adjudicaciones.scraper.AdjudicacionesScraper
+
 object AdjudicacionesRecolectorFromFirstToLast extends App with DbConfig {
   import slick.driver.PostgresDriver
   val driver = PostgresDriver
@@ -14,7 +16,7 @@ object AdjudicacionesRecolectorFromFirstToLast extends App with DbConfig {
 
   setupDb
 
-  AdjudicacionesCrawler.asIteratorFromFirstToLast(new PhantomJSDriver()).grouped(50).foreach { batch =>
+  AdjudicacionesScraper.asIteratorFromFirstToLast(new PhantomJSDriver()).grouped(50).foreach { batch =>
     val (from, to) = batchFromTo(batch)
 
     val insertBatch = db.run(adjudicaciones ++= batch.distinct)

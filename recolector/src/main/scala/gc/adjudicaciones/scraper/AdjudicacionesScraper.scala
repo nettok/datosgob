@@ -1,4 +1,4 @@
-package gc.adjudicaciones
+package gc.adjudicaciones.scraper
 
 import java.net.URI
 import java.text.{DecimalFormat, DecimalFormatSymbols}
@@ -12,6 +12,8 @@ import org.openqa.selenium.support.ui.{ExpectedConditions, WebDriverWait}
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
+import gc.adjudicaciones.{Adjudicacion, Proveedor}
+
 case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo: WebElement, filasDatos: Seq[WebElement]) {
   val columnaFecha = filaTitulo.findElement(By.tagName("td"))
   val paginaActual = filaPagineo.findElements(By.tagName("span")).get(1)
@@ -21,7 +23,7 @@ case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo
   ).slice(1, 2).headOption
 }
 
-class AdjudicacionesCrawler private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
+class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
 
   private val timeoutSeconds = timeout.toSeconds
 
@@ -194,14 +196,14 @@ class AdjudicacionesCrawler private (val browser: RemoteWebDriver, val timeout: 
   }
 }
 
-object AdjudicacionesCrawler {
+object AdjudicacionesScraper {
   def asIteratorFromFirstToLast(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
-    val crawler = new AdjudicacionesCrawler(browser, timeout)
+    val crawler = new AdjudicacionesScraper(browser, timeout)
     crawler.iterator(crawler.orderByFechaAsc(crawler.start()))
   }
 
   def asIteratorFromLastToFirst(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
-    val crawler = new AdjudicacionesCrawler(browser, timeout)
+    val crawler = new AdjudicacionesScraper(browser, timeout)
     crawler.iterator(crawler.start())
   }
 }
