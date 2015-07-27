@@ -4,6 +4,7 @@ import java.net.URI
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 import org.openqa.selenium._
 import org.openqa.selenium.remote.RemoteWebDriver
@@ -71,10 +72,10 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
       ExpectedConditions.presenceOfElementLocated(By.id("MasterGC_ContentBlockHolder_Table2")))
 
     val jsExec = browser.asInstanceOf[JavascriptExecutor]
+    val dateFormatter = DateTimeFormatter.ofPattern("dd.MMMM.yyyy", new Locale("es"))
 
-    // TODO: no usar fechas quemadas
-    jsExec.executeScript("$('#MasterGC_ContentBlockHolder_txtFechaIni').val('01.enero.2014')")
-    jsExec.executeScript("$('#MasterGC_ContentBlockHolder_txtFechaFin').val('05.enero.2014')")
+    jsExec.executeScript(s"$$('#MasterGC_ContentBlockHolder_txtFechaIni').val('${from.format(dateFormatter)}')")
+    jsExec.executeScript(s"$$('#MasterGC_ContentBlockHolder_txtFechaFin').val('${to.format(dateFormatter)}')")
 
     val consultarButton = form.findElement(By.id("MasterGC_ContentBlockHolder_Button1"))
 

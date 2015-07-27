@@ -19,7 +19,10 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
 
   setupDb
 
-  AdjudicacionesScraper.asIteratorOfDateRange(new FirefoxDriver(), LocalDate.now(), LocalDate.now()).grouped(50).foreach { batch =>
+  val from = LocalDate.of(2013, 5, 1)
+  val to = LocalDate.of(2013, 5, 31)
+
+  AdjudicacionesScraper.asIteratorOfDateRange(new FirefoxDriver(), from, to).grouped(50).foreach { batch =>
     val (from, to) = batchFromTo(batch)
 
     val insertBatch = db.run(adjudicaciones ++= batch.distinct)
