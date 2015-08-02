@@ -29,7 +29,7 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
   val firstLastScrapedF = Future { AdjudicacionesScraper.firstLast(new FirefoxDriver()) }
 
   // ultimo registro obtenido de GuateCompras y almacenado en la base de datos
-  val latestStoredF = db.run(adjudicaciones.sortBy(_.fecha).take(1).result.headOption)
+  val latestStoredF = db.run(adjudicaciones.sortBy(_.fecha.desc).take(1).result.headOption)
 
   // ejecutar en paralelo
 //  val currentState = for {
@@ -128,12 +128,12 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
   def retryBatchInsertFailure(batch: Seq[Adjudicacion]) = {
     val (from, to) = batchFromTo(batch)
     val (fromDate, toDate) = (from._1, to._1)
-    require(fromDate.compareTo(toDate) >= 0, "fecha descendente")
+    require(fromDate.compareTo(toDate) <= 0, "fecha ascendente")
 
     val batchSet = ListSet(batch: _*)
 
     val excludeQuery = adjudicaciones
-      .filter(adj => adj.fecha <= fromDate && adj.fecha >= toDate && adj.nog.inSet(batch.map(_.nog)))
+      .filter(adj => adj.fecha >= fromDate && adj.fecha <= toDate && adj.nog.inSet(batch.map(_.nog)))
 
     db.run(excludeQuery.result) map { exclude =>
       batchSet.diff(ListSet(exclude: _*))

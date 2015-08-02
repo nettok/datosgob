@@ -261,7 +261,7 @@ object AdjudicacionesScraper {
 
   def asIteratorOfDateRange(browser: RemoteWebDriver, from: LocalDate, to: LocalDate, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
     val scraper = startScraper(browser, timeout)
-    scraper.iterator(scraper.opcion5(from, to))
+    scraper.iterator(scraper.orderByFechaAsc(scraper.opcion5(from, to)))
   }
 
   def firstLast(browser: RemoteWebDriver, timeout: FiniteDuration = defaultTimeout): (Adjudicacion, Adjudicacion) = {
