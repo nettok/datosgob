@@ -6,6 +6,8 @@ import org.openqa.selenium.firefox.FirefoxDriver
 //import org.openqa.selenium.phantomjs.PhantomJSDriver
 
 import scala.collection.immutable.ListSet
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import db.DbConfig
@@ -19,33 +21,96 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
 
   setupDb
 
-  val from = LocalDate.of(2013, 5, 1)
-  val to = LocalDate.of(2013, 5, 31)
+  /* Es esta la primera vez que ejecutamos este recolector?  Donde nos quedamos la ultima vez?
+   * Debemos continuar desde donde nos quedamos.
+   */
 
-  AdjudicacionesScraper.asIteratorOfDateRange(new FirefoxDriver(), from, to).grouped(50).foreach { batch =>
-    val (from, to) = batchFromTo(batch)
+  // primero registro disponible en GuateCompras
+  val firstLastScrapedF = Future { AdjudicacionesScraper.firstLast(new FirefoxDriver()) }
 
-    val insertBatch = db.run(adjudicaciones ++= batch.distinct)
+  // ultimo registro obtenido de GuateCompras y almacenado en la base de datos
+  val latestStoredF = db.run(adjudicaciones.sortBy(_.fecha).take(1).result.headOption)
 
-    insertBatch onSuccess {
-      case Some(recordsInserted) =>
-        logger.info(s"Inserted $recordsInserted of ${batch.length} records from $from to $to")
+  // ejecutar en paralelo
+//  val currentState = for {
+//    firstLastScraped <- firstLastScraped
+//    latestStored <- latestStored
+//  } yield (firstLastScraped, latestStored)
+
+  // ejecutar en paralelo
+  val currentState = firstLastScrapedF.zip(latestStoredF)
+
+  // obtener rango de fechas a recolectar
+  val startEnd = Await.result(
+    currentState map {
+      case (firstLatest, latestStored) =>
+        latestStored match {
+          case Some(adj) => (adj.fecha, firstLatest._2.fecha)
+          case None => (firstLatest._1.fecha, firstLatest._2.fecha)
+        }
+    }, 30.seconds
+  )
+
+  /* Empezar a recolectar las adjudicaciones de cada rango mensual.
+   *
+   * Separar la recoleccion por mes facilita la recuperacion de fallas
+   * de forma eficiente y permite paralelizar la recoleccion.
+   */
+
+  // dividir el rango de fechas completo por meses
+  val pendingMonths: Seq[(LocalDate, LocalDate)] = {
+    val start = startEnd._1
+    val end = startEnd._2
+
+    val years = Stream.range(start.getYear, end.getYear + 1)
+    val months = (Stream(start.getMonthValue to 12) ++ Stream.continually(1 to 12)).toIterator
+    val firstDays = (Stream(start.getDayOfMonth) ++ Stream.continually(1)).toIterator
+
+    val froms = for {
+      year <- years
+      month <- months.next()
+      from = LocalDate.of(year, month, firstDays.next())
+      if from.isBefore(end) || from.isEqual(end)
+    } yield from
+
+    froms.map { from =>
+      val to = from.withDayOfMonth(from.lengthOfMonth)
+      (from, to)
     }
+  }
 
-    insertBatch onFailure {
-      case e: java.sql.BatchUpdateException =>
-        logger.error(s"Insert failed from $from to $to\n\t-- $e\n\t-- ${e.getNextException}")
-        val insertBatchRetry = retryBatchInsertFailure(batch)
+  pendingMonths.foreach { case (from, to) =>
+    logger.info(s"Scraping date range from $from to $to")
+    // TODO: recuperacion de fallas
+    scrapeDateRange(from, to)
+  }
 
-        insertBatchRetry onSuccess {
-          case (retrySet, Some(recordsInserted)) =>
-            logger.info(s"(Retry) Inserted $recordsInserted of ${retrySet.size} records from $from to $to")
-        }
+  def scrapeDateRange(from: LocalDate, to: LocalDate) = {
+    AdjudicacionesScraper.asIteratorOfDateRange(new FirefoxDriver(), from, to).grouped(50).foreach { batch =>
+      val (from, to) = batchFromTo(batch)
 
-        insertBatchRetry onFailure {
-          case e: java.sql.BatchUpdateException =>
-            logger.error(s"(Retry) Insert failed from $from to $to\n\t-- $e\n\t-- ${e.getNextException}")
-        }
+      val insertBatch = db.run(adjudicaciones ++= batch.distinct)
+
+      insertBatch onSuccess {
+        case Some(recordsInserted) =>
+          logger.info(s"Inserted $recordsInserted of ${batch.length} records from $from to $to")
+      }
+
+      insertBatch onFailure {
+        case e: java.sql.BatchUpdateException =>
+          logger.error(s"Insert failed from $from to $to\n\t-- $e\n\t-- ${e.getNextException}")
+          val insertBatchRetry = retryBatchInsertFailure(batch)
+
+          insertBatchRetry onSuccess {
+            case (retrySet, Some(recordsInserted)) =>
+              logger.info(s"(Retry) Inserted $recordsInserted of ${retrySet.size} records from $from to $to")
+          }
+
+          insertBatchRetry onFailure {
+            case e: java.sql.BatchUpdateException =>
+              logger.error(s"(Retry) Insert failed from $from to $to\n\t-- $e\n\t-- ${e.getNextException}")
+          }
+      }
     }
   }
 
