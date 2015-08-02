@@ -241,21 +241,23 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
 }
 
 object AdjudicacionesScraper {
-  def asIteratorFromFirstToLast(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
+  val defaultTimeout = 30.seconds
+
+  def asIteratorFromFirstToLast(browser: RemoteWebDriver, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
     val scraper = new AdjudicacionesScraper(browser, timeout)
 
     scraper.start()
     scraper.iterator(scraper.orderByFechaAsc(scraper.opcion1()))
   }
 
-  def asIteratorFromLastToFirst(browser: RemoteWebDriver, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
+  def asIteratorFromLastToFirst(browser: RemoteWebDriver, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
     val scraper = new AdjudicacionesScraper(browser, timeout)
 
     scraper.start()
     scraper.iterator(scraper.opcion1())
   }
 
-  def asIteratorOfDateRange(browser: RemoteWebDriver, from: LocalDate, to: LocalDate, timeout: FiniteDuration = 10.seconds): Iterator[Adjudicacion]  = {
+  def asIteratorOfDateRange(browser: RemoteWebDriver, from: LocalDate, to: LocalDate, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
     val scraper = new AdjudicacionesScraper(browser, timeout)
 
     scraper.start()
