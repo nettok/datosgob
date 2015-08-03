@@ -2,8 +2,8 @@ package gc.adjudicaciones
 
 import java.time.LocalDate
 
-import org.openqa.selenium.firefox.FirefoxDriver
-//import org.openqa.selenium.phantomjs.PhantomJSDriver
+//import org.openqa.selenium.firefox.FirefoxDriver
+import org.openqa.selenium.phantomjs.PhantomJSDriver
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.duration._
@@ -21,7 +21,7 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
 
   setupDb
 
-  val webDriver = new FirefoxDriver()
+  val webDriver = new PhantomJSDriver()
 
   /* Es esta la primera vez que ejecutamos este recolector?  Donde nos quedamos la ultima vez?
    * Debemos continuar desde donde nos quedamos.
