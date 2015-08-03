@@ -122,9 +122,8 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
       var tablaActual: Option[TablaResultado] = Some(tabla)
 
       def hasNext = {
-        val done = tablaActual.get.paginaSiguiente.isDefined
-        if (done) close()
-        primeraVez || done
+        val hasNext = tablaActual.get.paginaSiguiente.isDefined
+        primeraVez || hasNext
       }
 
       def next(): TablaResultado = {
@@ -244,14 +243,6 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
   private def readMonto(montoTexto: String): BigDecimal = {
     BigDecimal(decimalFormat.parse(montoTexto).asInstanceOf[java.math.BigDecimal])
   }
-
-  private var closed = false
-
-  def close() {
-    if (closed) return
-    browser.close()
-    closed = true
-  }
 }
 
 object AdjudicacionesScraper {
@@ -283,7 +274,6 @@ object AdjudicacionesScraper {
     val tabla = scraper.opcion1()
     val last = scraper.readFilaDatos(tabla.filasDatos.head)
     val first = scraper.readFilaDatos(scraper.orderByFechaAsc(tabla).filasDatos.head)
-    scraper.close()
     (first, last)
   }
 }

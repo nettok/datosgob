@@ -21,21 +21,17 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
 
   setupDb
 
+  val webDriver = new FirefoxDriver()
+
   /* Es esta la primera vez que ejecutamos este recolector?  Donde nos quedamos la ultima vez?
    * Debemos continuar desde donde nos quedamos.
    */
 
   // primero registro disponible en GuateCompras
-  val firstLastScrapedF = Future { AdjudicacionesScraper.firstLast(new FirefoxDriver()) }
+  val firstLastScrapedF = Future { AdjudicacionesScraper.firstLast(webDriver) }
 
   // ultimo registro obtenido de GuateCompras y almacenado en la base de datos
   val latestStoredF = db.run(adjudicaciones.sortBy(_.fecha.desc).take(1).result.headOption)
-
-  // ejecutar en paralelo
-//  val currentState = for {
-//    firstLastScraped <- firstLastScraped
-//    latestStored <- latestStored
-//  } yield (firstLastScraped, latestStored)
 
   // ejecutar en paralelo
   val currentState = firstLastScrapedF.zip(latestStoredF)
@@ -82,11 +78,19 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
   pendingMonths.foreach { case (from, to) =>
     logger.info(s"Scraping date range from $from to $to")
     // TODO: recuperacion de fallas
-    scrapeDateRange(from, to)
+    val scrapeDateRangeF = Future.sequence(scrapeDateRange(from, to))
+
+    scrapeDateRangeF onSuccess {
+      case _ => logger.info(s"Scraped date range from $from to $to")
+    }
+
+    scrapeDateRangeF onFailure {
+      case _ => logger.error(s"Scrape date range failed from $from to $to")
+    }
   }
 
   def scrapeDateRange(from: LocalDate, to: LocalDate) = {
-    AdjudicacionesScraper.asIteratorOfDateRange(new FirefoxDriver(), from, to).grouped(50).foreach { batch =>
+    AdjudicacionesScraper.asIteratorOfDateRange(webDriver, from, to).grouped(50).map { batch =>
       val (from, to) = batchFromTo(batch)
 
       val insertBatch = db.run(adjudicaciones ++= batch.distinct)
@@ -111,7 +115,9 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
               logger.error(s"(Retry) Insert failed from $from to $to\n\t-- $e\n\t-- ${e.getNextException}")
           }
       }
-    }
+
+      insertBatch
+    }.toList
   }
 
   def batchFromTo(batch: Seq[Adjudicacion]) = {
