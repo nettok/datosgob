@@ -91,6 +91,9 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
   }
 
   // TODO: reintentar meses fallidos
+  scrapeMonths.foreach { scrapeMonth =>
+    Await.ready(scrapeMonth, Duration.Inf)
+  }
 
   def scrapeDateRange(from: LocalDate, to: LocalDate) = {
     AdjudicacionesScraper.asIteratorOfDateRange(webDriver, from, to).grouped(50).map { batch =>
