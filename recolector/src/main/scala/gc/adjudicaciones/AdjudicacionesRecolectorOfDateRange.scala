@@ -75,9 +75,8 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
     }
   }
 
-  pendingMonths.foreach { case (from, to) =>
-    logger.info(s"Scraping date range from $from to $to")
-    // TODO: recuperacion de fallas
+  // extraer y almacenar los datos mes a mes
+  val scrapeMonths = pendingMonths map { case (from, to) =>
     val scrapeDateRangeF = Future.sequence(scrapeDateRange(from, to))
 
     scrapeDateRangeF onSuccess {
@@ -85,9 +84,13 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
     }
 
     scrapeDateRangeF onFailure {
-      case _ => logger.error(s"Scrape date range failed from $from to $to")
+      case e: Throwable => logger.error(s"Scrape date range failed from $from to $to\n\t-- $e")
     }
+
+    scrapeDateRangeF
   }
+
+  // TODO: reintentar meses fallidos
 
   def scrapeDateRange(from: LocalDate, to: LocalDate) = {
     AdjudicacionesScraper.asIteratorOfDateRange(webDriver, from, to).grouped(50).map { batch =>
@@ -103,6 +106,10 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
       insertBatch onFailure {
         case e: java.sql.BatchUpdateException =>
           logger.error(s"Insert failed from $from to $to\n\t-- $e\n\t-- ${e.getNextException}")
+      }
+
+      insertBatch recoverWith  {
+        case e: java.sql.BatchUpdateException =>
           val insertBatchRetry = retryBatchInsertFailure(batch)
 
           insertBatchRetry onSuccess {
@@ -114,9 +121,9 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
             case e: java.sql.BatchUpdateException =>
               logger.error(s"(Retry) Insert failed from $from to $to\n\t-- $e\n\t-- ${e.getNextException}")
           }
-      }
 
-      insertBatch
+          insertBatchRetry
+      }
     }.toList
   }
 
