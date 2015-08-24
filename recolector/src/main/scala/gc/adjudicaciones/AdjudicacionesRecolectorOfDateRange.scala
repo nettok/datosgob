@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 //import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.phantomjs.PhantomJSDriver
+import org.openqa.selenium.remote.RemoteWebDriver
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.duration._
@@ -77,7 +78,7 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
 
   // extraer y almacenar los datos mes a mes
   val scrapeMonths = pendingMonths map { case (from, to) =>
-    val scrapeDateRangeF = Future.sequence(scrapeDateRange(from, to))
+    val scrapeDateRangeF = Future.sequence(scrapeDateRange(webDriver, from, to))
 
     scrapeDateRangeF onSuccess {
       case _ => logger.info(s"Scraped date range from $from to $to")
@@ -90,12 +91,12 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
     scrapeDateRangeF
   }
 
-  // TODO: reintentar meses fallidos
+  // esperar a que termine cada mes antes de terminar el programa
   scrapeMonths.foreach { scrapeMonth =>
     Await.ready(scrapeMonth, Duration.Inf)
   }
 
-  def scrapeDateRange(from: LocalDate, to: LocalDate) = {
+  def scrapeDateRange(browser: RemoteWebDriver, from: LocalDate, to: LocalDate) = {
     AdjudicacionesScraper.asIteratorOfDateRange(webDriver, from, to).grouped(50).map { batch =>
       val (from, to) = batchFromTo(batch)
 
