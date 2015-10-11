@@ -2,9 +2,8 @@ package gc.adjudicaciones
 
 import java.time.LocalDate
 
-//import org.openqa.selenium.firefox.FirefoxDriver
-import org.openqa.selenium.phantomjs.PhantomJSDriver
-import org.openqa.selenium.remote.RemoteWebDriver
+import org.openqa.selenium.WebDriver
+import org.openqa.selenium.firefox.FirefoxDriver
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.duration._
@@ -21,8 +20,8 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
   import driver.api._
 
   setupDb
-
-  val webDriver = new PhantomJSDriver()
+  
+  val webDriver = new FirefoxDriver()
 
   /* Es esta la primera vez que ejecutamos este recolector?  Donde nos quedamos la ultima vez?
    * Debemos continuar desde donde nos quedamos.
@@ -96,7 +95,7 @@ object AdjudicacionesRecolectorOfDateRange extends App with DbConfig {
     Await.ready(scrapeMonth, Duration.Inf)
   }
 
-  def scrapeDateRange(browser: RemoteWebDriver, from: LocalDate, to: LocalDate) = {
+  def scrapeDateRange(browser: WebDriver, from: LocalDate, to: LocalDate) = {
     AdjudicacionesScraper.asIteratorOfDateRange(webDriver, from, to).grouped(50).map { batch =>
       val (from, to) = batchFromTo(batch)
 

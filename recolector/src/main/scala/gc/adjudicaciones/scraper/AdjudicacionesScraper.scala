@@ -7,7 +7,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 import org.openqa.selenium._
-import org.openqa.selenium.remote.RemoteWebDriver
 import org.openqa.selenium.support.ui.{ExpectedConditions, WebDriverWait}
 
 import scala.collection.JavaConverters._
@@ -23,7 +22,7 @@ case class TablaResultado(tabla: WebElement, filaTitulo: WebElement, filaPagineo
   val paginaSiguiente: Option[WebElement] = enlacesPaginas.slice(1, 2).headOption
 }
 
-class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: FiniteDuration) {
+class AdjudicacionesScraper private (val browser: WebDriver, val timeout: FiniteDuration) {
 
   private val timeoutSeconds = timeout.toSeconds
 
@@ -248,28 +247,28 @@ class AdjudicacionesScraper private (val browser: RemoteWebDriver, val timeout: 
 object AdjudicacionesScraper {
   val defaultTimeout = 30.seconds
 
-  private def startScraper(browser: RemoteWebDriver, timeout: FiniteDuration = defaultTimeout): AdjudicacionesScraper = {
+  private def startScraper(browser: WebDriver, timeout: FiniteDuration = defaultTimeout): AdjudicacionesScraper = {
     val scraper = new AdjudicacionesScraper(browser, timeout)
     scraper.start()
     scraper
   }
 
-  def asIteratorFromFirstToLast(browser: RemoteWebDriver, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
+  def asIteratorFromFirstToLast(browser: WebDriver, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
     val scraper = startScraper(browser, timeout)
     scraper.iterator(scraper.orderByFechaAsc(scraper.opcion1()))
   }
 
-  def asIteratorFromLastToFirst(browser: RemoteWebDriver, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
+  def asIteratorFromLastToFirst(browser: WebDriver, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
     val scraper = startScraper(browser, timeout)
     scraper.iterator(scraper.opcion1())
   }
 
-  def asIteratorOfDateRange(browser: RemoteWebDriver, from: LocalDate, to: LocalDate, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
+  def asIteratorOfDateRange(browser: WebDriver, from: LocalDate, to: LocalDate, timeout: FiniteDuration = defaultTimeout): Iterator[Adjudicacion]  = {
     val scraper = startScraper(browser, timeout)
     scraper.iterator(scraper.orderByFechaAsc(scraper.opcion5(from, to)))
   }
 
-  def firstLast(browser: RemoteWebDriver, timeout: FiniteDuration = defaultTimeout): (Adjudicacion, Adjudicacion) = {
+  def firstLast(browser: WebDriver, timeout: FiniteDuration = defaultTimeout): (Adjudicacion, Adjudicacion) = {
     val scraper = startScraper(browser, timeout)
     val tabla = scraper.opcion1()
     val last = scraper.readFilaDatos(tabla.filasDatos.head)
